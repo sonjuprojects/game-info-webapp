@@ -1,45 +1,40 @@
 const express = require('express');
-const axios = require('axios');
-const cheerio = require('cheerio');
-const { HowLongToBeatService } = require('howlongtobeat');
 const cors = require('cors');
+const { HowLongToBeatService } = require('howlongtobeat');
 
 const app = express();
 app.use(cors());
 
-const hltbService = new HowLongToBeatService();
+app.get('/game', async (req, res) => {
+  const title = req.query.title;
+  if (!title) {
+    return res.status(400).json({ error: 'Game title is required' });
+  }
 
-app.get('/game-info', async (req, res) => {
-    const gameName = req.query.name;
-    if (!gameName) return res.status(400).json({ error: 'Game name required' });
+  try {
+    // HowLongToBeat search
+    const hltbService = new HowLongToBeatService();
+    const hltbResults = await hltbService.search(title);
+    const game = hltbResults.length ? hltbResults[0] : null;
 
-    try {
-        const hltbResults = await hltbService.search(gameName);
-        const hltb = hltbResults[0] || null;
+    // Simulated Metacritic data for now
+    const metacriticData = {
+      score: 88,
+      review: 'Great action and storytelling. Sample Metacritic review.'
+    };
 
-        const query = gameName.toLowerCase().replace(/ /g, '-');
-        const metaUrl = `https://www.metacritic.com/game/${query}`;
-        const response = await axios.get(metaUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-        const $ = cheerio.load(response.data);
-
-        const metaScore = $('.metascore_w.xlarge.game').first().text().trim();
-        const userScore = $('.metascore_w.user.large.game').first().text().trim();
-        const summary = $('.summary_detail.product_summary .data').first().text().trim();
-
-        res.json({
-            game: gameName,
-            metacritic: {
-                score: metaScore,
-                userScore: userScore,
-                summary: summary
-            },
-            howlongtobeat: hltb
-        });
-    } catch (err) {
-        res.status(500).json({ error: 'Error fetching game data', details: err.message });
-    }
+    res.json({
+      title,
+      metacritic: metacriticData,
+      hltb: game
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
 });
 
+// Dynamic port + 0.0.0.0 binding for Render
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
