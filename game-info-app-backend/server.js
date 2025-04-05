@@ -12,12 +12,16 @@ app.get('/game', async (req, res) => {
   }
 
   try {
+    console.log(`🔍 Searching for: ${title}`);
+
     // HowLongToBeat search
     const hltbService = new HowLongToBeatService();
     const hltbResults = await hltbService.search(title);
     const game = hltbResults.length ? hltbResults[0] : null;
 
-    // Simulated Metacritic data for now
+    console.log('✅ HLTB result:', game);
+
+    // Simulated Metacritic data
     const metacriticData = {
       score: 88,
       review: 'Great action and storytelling. Sample Metacritic review.'
@@ -29,7 +33,7 @@ app.get('/game', async (req, res) => {
       hltb: game
     });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('❌ Server Error:', error);
     res.status(500).json({ error: 'Something went wrong.' });
   }
 });
