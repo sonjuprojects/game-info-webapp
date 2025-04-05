@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { HowLongToBeatService } = require('howlongtobeat');
+const { search } = require('howlongtobeat-api');
 
 const app = express();
 app.use(cors());
@@ -8,38 +8,42 @@ app.use(cors());
 app.get('/game', async (req, res) => {
   const title = req.query.title;
   if (!title) {
+    console.warn('⚠️ No game title provided');
     return res.status(400).json({ error: 'Game title is required' });
   }
 
+  console.log(`🔍 Searching for game: ${title}`);
+
   try {
-    console.log(`🔍 Searching for: ${title}`);
+    const results = await search(title);
 
-    // HowLongToBeat search
-    const hltbService = new HowLongToBeatService();
-    const hltbResults = await hltbService.search(title);
-    const game = hltbResults.length ? hltbResults[0] : null;
+    console.log(`📦 HLTB raw results for "${title}":`, results);
 
-    console.log('✅ HLTB result:', game);
+    const game = results.length ? results[0] : null;
 
-    // Simulated Metacritic data
+    if (!game) {
+      console.warn(`❌ No HLTB results found for: ${title}`);
+    }
+
+    // Simulated Metacritic data (you can replace with scraper or API later)
     const metacriticData = {
       score: 88,
-      review: 'Great action and storytelling. Sample Metacritic review.'
+      review: 'Sample Metacritic review for demo purposes.'
     };
 
     res.json({
       title,
       metacritic: metacriticData,
-      hltb: game
+      hltb: game || { message: 'No HowLongToBeat info found.' }
     });
   } catch (error) {
-    console.error('❌ Server Error:', error);
-    res.status(500).json({ error: 'Something went wrong.' });
+    console.error('❌ Server Error in /game route:', error);
+    res.status(500).json({ error: 'Something went wrong fetching game info' });
   }
 });
 
-// Dynamic port + 0.0.0.0 binding for Render
+// For Render dynamic port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
 });
